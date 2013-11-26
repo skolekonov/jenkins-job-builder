@@ -82,6 +82,8 @@ def git(self, xml_parent, data):
     :arg str choosing-strategy: Jenkins class for selecting what to build
     :arg str git-config-name: Configure name for Git clone
     :arg str git-config-email: Configure email for Git clone
+    :arg str basedir: A local directory where the Git repository 
+      will be checked out.
 
     :browser values:
         :githubweb:
@@ -125,7 +127,6 @@ def git(self, xml_parent, data):
         ("fastpoll", 'remotePoll', False),
         ("git-tool", 'gitTool', "Default"),
         (None, 'submoduleCfg', '', {'class': 'list'}),
-        ('basedir', 'relativeTargetDir', ''),
         ('reference-repo', 'reference', ''),
         ("git-config-name", 'gitConfigName', ''),
         ("git-config-email", 'gitConfigEmail', ''),
@@ -172,6 +173,10 @@ def git(self, xml_parent, data):
         urc = XML.SubElement(scm, 'userMergeOptions')
         XML.SubElement(urc, 'mergeRemote').text = name
         XML.SubElement(urc, 'mergeTarget').text = branch
+    if 'basedir' in data:
+        XML.SubElement(scm, 'relativeTargetDir').text = data['basedir']
+    else:
+        XML.SubElement(scm, 'relativeTargetDir').text = ''
 
     try:
         choosing_strategy = choosing_strategies[data.get('choosing-strategy',

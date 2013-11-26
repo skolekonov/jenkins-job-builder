@@ -50,6 +50,8 @@ def archive(parser, xml_parent, data):
     :arg str excludes: path specifier for artifacts to exclude
     :arg bool latest-only: only keep the artifacts from the latest
       successful build
+    :arg bool allow-empty: This option allows the archiving process to return
+      nothing without failing the build
 
     Example::
 
@@ -75,6 +77,8 @@ def archive(parser, xml_parent, data):
         latest.text = 'true'
     else:
         latest.text = 'false'
+    allow_empty = str(data.get('allow-empty', False)).lower()
+    XML.SubElement(archiver, 'allowEmptyArchive').text = allow_empty
 
 
 def trigger_parameterized_builds(parser, xml_parent, data):
@@ -1105,10 +1109,28 @@ def base_email_ext(parser, xml_parent, data, ttype):
     XML.SubElement(email, 'recipientList').text = ''
     XML.SubElement(email, 'subject').text = '$PROJECT_DEFAULT_SUBJECT'
     XML.SubElement(email, 'body').text = '$PROJECT_DEFAULT_CONTENT'
-    XML.SubElement(email, 'sendToDevelopers').text = 'false'
-    XML.SubElement(email, 'sendToRequester').text = 'false'
-    XML.SubElement(email, 'includeCulprits').text = 'false'
-    XML.SubElement(email, 'sendToRecipientList').text = 'true'
+    if 'send-to' in data:
+        if 'developers' in data['send-to']:
+            XML.SubElement(email, 'sendToDevelopers').text = 'true'
+        else:
+            XML.SubElement(email, 'sendToDevelopers').text = 'false'
+        if 'requestor' in data['send-to']:
+            XML.SubElement(email, 'sendToRequester').text = 'true'
+        else:
+            XML.SubElement(email, 'sendToRequester').text = 'false'
+        if 'culprits' in data['send-to']:
+            XML.SubElement(email, 'includeCulprits').text = 'true'
+        else:
+            XML.SubElement(email, 'includeCulprits').text = 'false'
+        if 'recipients' in data['send-to']:
+            XML.SubElement(email, 'sendToRecipientList').text = 'true'
+        else:
+            XML.SubElement(email, 'sendToRecipientList').text = 'false'
+    else:
+        XML.SubElement(email, 'sendToRequester').text = 'false'
+        XML.SubElement(email, 'sendToDevelopers').text = 'false' 
+        XML.SubElement(email, 'includeCulprits').text = 'false'
+        XML.SubElement(email, 'sendToRecipientList').text = 'false'
 
 
 def email_ext(parser, xml_parent, data):
@@ -1142,6 +1164,8 @@ def email_ext(parser, xml_parent, data):
     :arg bool still-unstable: Send an email if the build is still unstable
         (default false)
     :arg bool pre-build: Send an email before the build (default false)
+    :arg list send-to: Select each group of people you would like to
+        send emails to if the trigger is triggered (optional)
 
     Example::
 
@@ -1164,6 +1188,9 @@ def email_ext(parser, xml_parent, data):
             fixed: true
             still-unstable: true
             pre-build: true
+            send-to:
+              - recipients
+              - developers
     """
     emailext = XML.SubElement(xml_parent,
                               'hudson.plugins.emailext.ExtendedEmailPublisher')
@@ -2809,6 +2836,141 @@ def git(parser, xml_parent, data):
                 'hudson.plugins.git.GitPublisher_-NoteToPush')
             handle_entity_children(note['note'], xml_note, note_mappings)
 
+
+def description_setter(parser, xml_parent, data):
+    """yaml: description-setter
+    This plugin sets the description for each build,
+    based upon a RegEx test of the build log file.
+
+    Requires the Jenkins `Description Setter Plugin.
+    <https://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin>`_
+
+    :arg str regexp: A RegEx which is used to scan the build log file
+    :arg str regexp-for-failed: A RegEx which is used for failed builds 
+        (optional)
+    :arg str description: The description to set on the build (optional) 
+    :arg str description-for-failed: The description to set on the failed builds
+        (optional)
+    :arg bool set-for-matrix: Also set the description on
+        a multi-configuration build (Default False)
+
+    Example::
+
+        publishers:                                                                 
+          - description-setter:                                                     
+              regexp: ".*(<a href=.*a>)" 
+    """
+
+    descriptionsetter = XML.SubElement(xml_parent,
+        'hudson.plugins.descriptionsetter.DescriptionSetterPublisher')
+    XML.SubElement(descriptionsetter, 'regexp').text = data.get('regexp', '')
+    XML.SubElement(descriptionsetter, 'regexpForFailed').text = \
+        data.get('regexp-for-failed', '')
+    if 'description' in data:                                             
+        XML.SubElement(descriptionsetter, 'description').text = \
+            data['description']
+    if 'description-for-failed' in data:                                             
+        XML.SubElement(descriptionsetter, 'descriptionForFailed').text = \
+            data['description-for-failed']
+    for_matrix = str(data.get('set-for-matrix', False)).lower()
+    XML.SubElement(descriptionsetter, 'setForMatrix').text = for_matrix
+
+
+def artifact_deployer(parser, xml_parent, data):
+    """yaml: artifact-deployer
+    This plugin makes it possible to copy artifacts to remote locations.
+
+    Requires the Jenkins `ArtifactDeployer Plugin.
+    <https://wiki.jenkins-ci.org/display/JENKINS/ArtifactDeployer+Plugin>`_
+
+    :arg bool deploy-if-fail: Deploy if the build is failed (default False)
+
+
+    Example::
+
+        publishers:
+          - artifact-deployer:                                                      
+              entries:
+    """
+
+    deployer = XML.SubElement(xml_parent,
+            'org.jenkinsci.plugins.artifactdeployer.ArtifactDeployerPublisher')
+    if data is None or 'entries' not in data:                             
+        raise Exception('entries field is missing')    
+    elif data.get('entries', None) is None:
+        choices = XML.SubElement(deployer, 'entries',                                   
+                             {'class': 'empty-list'})
+    deploy_if_fail = str(data.get('deploy-if-fail', False)).lower()
+    XML.SubElement(deployer, 'deployEvenBuildFail').text = deploy_if_fail
+
+
+def github_publisher(parser, xml_parent, data):
+    """yaml: github-publisher
+    This plugin integrates Jenkins with Github projects.
+
+    Requires the Jenkins `GitHub Plugin.
+    <https://wiki.jenkins-ci.org/display/JENKINS/GitHub+Plugin>`_
+
+    Example::
+
+        publishers:
+            - github-publisher:
+    """
+
+    XML.SubElement(xml_parent, 'com.cloudbees.jenkins.GitHubCommitNotifier')
+
+def ruby_metrics(parser, xml_parent, data):
+    """yaml: ruby-metrics
+    Adds support for the Ruby metrics plugin
+
+    Requires the Jenkins `Ruby metrics plugin.
+    <https://wiki.jenkins-ci.org/display/JENKINS/Ruby+metrics+plugin>`_
+
+    :arg str report-dir: Relative path to the coverage report directory
+    :arg int tc-healthy: Report healthy when total coverage is greater then
+      this number 
+    :arg int tc-unhealthy: Report unhealthy when total coverage is less then
+      this number 
+    :arg int tc-unstable: Report unstable when total coverage is less then
+      this number 
+    :arg int cc-healthy: Report healthy when code coverage is greater then
+      this number 
+    :arg int cc-unhealthy: Report unhealthy when code coverage is less then
+      this number 
+    :arg int cc-unstable: Report unstable when code coverage is less then
+      this number 
+
+    Example::
+
+        publishers:
+          - ruby-metrics:                                                           
+              report-dir: "coverage/rcov"  
+    """
+
+    metrics = XML.SubElement(xml_parent,
+                  'hudson.plugins.rubyMetrics.rcov.RcovPublisher')
+    report_dir = data.get('report-dir', '')
+    XML.SubElement(metrics, 'reportDir').text = report_dir
+    targets = XML.SubElement(metrics, 'targets')
+    tc_target = XML.SubElement(targets,
+                    'hudson.plugins.rubyMetrics.rcov.model.MetricTarget')
+    XML.SubElement(tc_target, 'metric').text = 'TOTAL_COVERAGE'
+    tc_healthy = data.get('tc-healthy', 80)
+    XML.SubElement(tc_target, 'healthy').text = str(tc_healthy)
+    tc_unhealthy = data.get('tc-unhealthy', 0)
+    XML.SubElement(tc_target, 'unhealthy').text = str(tc_unhealthy)
+    tc_unstable = data.get('tc-unstable', 0)
+    XML.SubElement(tc_target, 'unstable').text = str(tc_unstable)
+    cc_target = XML.SubElement(targets,
+                    'hudson.plugins.rubyMetrics.rcov.model.MetricTarget')
+    XML.SubElement(cc_target, 'metric').text = 'CODE_COVERAGE'
+    cc_healthy = data.get('cc-healthy', 80)
+    XML.SubElement(cc_target, 'healthy').text = str(cc_healthy)
+    cc_unhealthy = data.get('cc-unhealthy', 0)
+    XML.SubElement(cc_target, 'unhealthy').text = str(cc_unhealthy)
+    cc_unstable = data.get('cc-unstable', 0)
+    XML.SubElement(cc_target, 'unstable').text = str(cc_unstable)
+    
 
 class Publishers(jenkins_jobs.modules.base.Base):
     sequence = 70

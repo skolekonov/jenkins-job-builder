@@ -340,6 +340,16 @@ def github_pull_request(parser, xml_parent, data):
     :arg string cron: cron syntax of when to run (optional)
     :arg list white-list: users whose pull requests build (optional)
     :arg list org-list: orgs whose users should be white listed (optional)
+    :arg str trigger-phrase: commenting this phrase in the pull request
+      will trigger a build (optional)
+    :arg bool only-trigger-phrase: only commenting the trigger phrase
+      in the pull request will trigger a build (optional)
+    :arg bool use-hooks: Disable regular polling (cron) for changes in GitHub
+      and try to create GitHub hook (optional)
+    :arg bool permit-all: Build every pull request automatically without asking
+      (optional)
+    :arg bool close-failed-requests: Close failed pull request automatically
+      (optional)
 
     Example::
 
@@ -366,7 +376,17 @@ def github_pull_request(parser, xml_parent, data):
     org_string = "\n".join(data.get('org-list', []))
     XML.SubElement(ghprb, 'orgslist').text = org_string
     XML.SubElement(ghprb, 'cron').text = data.get('cron', '')
-
+    trigger_phrase = data.get ('trigger-phrase', '')
+    XML.SubElement(ghprb, 'triggerPhrase').text = trigger_phrase
+    only_phrase = str(data.get('only-trigger-phrase', False)).lower()
+    XML.SubElement(ghprb, 'onlyTriggerPhrase').text = only_phrase
+    use_hooks = str(data.get('use-hooks', False)).lower()                  
+    XML.SubElement(ghprb, 'useGitHubHooks').text = use_hooks
+    permit_all = str(data.get('permit-all', False)).lower()                              
+    XML.SubElement(ghprb, 'permitAll').text = permit_all
+    close_failed_requests = str(data.get('close-failed-requests', False)).lower()                            
+    XML.SubElement(ghprb, 'autoCloseFailedPullRequests').text = close_failed_requests                            
+                       
 
 def build_result(parser, xml_parent, data):
     """yaml: build-result

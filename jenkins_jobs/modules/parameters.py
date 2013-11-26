@@ -197,6 +197,70 @@ def choice_param(parser, xml_parent, data):
         XML.SubElement(a, 'string').text = choice
 
 
+def node_param(parser, xml_parent, data):
+    """yaml: choice
+    A node parameter.
+    Requires the Jenkins `NodeLabel Parameter Plugin.                             
+    <https://wiki.jenkins-ci.org/display/JENKINS/                               
+    NodeLabel+Parameter+Plugin>`_
+ 
+    :arg str name: the name of the parameter
+    :arg list allowed-slaves: Defines a list of nodes where 
+        this job could potentially be executed on
+    :arg list default-slaves: The nodes used when job gets triggered
+        by anything else then manually
+    :arg str trigger-condition: In case of multi node selection
+        set the condition of triggering the next build on the next node
+    :arg str description: a description of the parameter (optional)
+    :arg str ignore-offline-nodes: Ignore nodes not online or
+        not having executors (optional)
+
+    Example::
+
+      parameters:
+        - node:
+            name: srv-ubuntu
+            allowed-slaves:
+              - node1
+              - node2
+            default-slaves: 
+              - node3
+            trigger-condition: allow-multi-node
+    """
+    pdef = base_param(parser, xml_parent, data, False,
+                      'org.jvnet.jenkins.plugins.'
+                      'nodelabelparameter.NodeParameterDefinition')
+    allowed = XML.SubElement(pdef, 'allowedSlaves')
+    for slave in data['allowed-slaves']:
+        XML.SubElement(allowed, 'string').text = slave
+    default = XML.SubElement(pdef, 'defaultSlaves')
+    for slave in data['default-slaves']:
+        XML.SubElement(default, 'string').text = slave
+    if data['trigger-condition'] == 'disallow-multi-node':
+        XML.SubElement(pdef, 'triggerIfResult').text = \
+            'multiSelectionDisallowed'
+        XML.SubElement(pdef, 'allowMultiNodeSelection').text = 'false'
+        XML.SubElement(pdef, 'triggerConcurrentBuilds').text = 'false'
+    if data['trigger-condition'] == 'allow-multi-node':
+        XML.SubElement(pdef, 'triggerIfResult').text = \
+            'allowMultiSelectionForConcurrentBuilds'
+        XML.SubElement(pdef, 'allowMultiNodeSelection').text = 'true'
+        XML.SubElement(pdef, 'triggerConcurrentBuilds').text = 'true'
+    if data['trigger-condition'] == 'success' or data['trigger-condition'] == 'unstable':
+        XML.SubElement(pdef, 'triggerIfResult').text = \
+            data['trigger-condition']
+        XML.SubElement(pdef, 'allowMultiNodeSelection').text = 'true'
+        XML.SubElement(pdef, 'triggerConcurrentBuilds').text = 'false'
+    if data['trigger-condition'] == 'all-cases':
+        XML.SubElement(pdef, 'triggerIfResult').text = 'allCases'
+        XML.SubElement(pdef, 'allowMultiNodeSelection').text = 'true'
+        XML.SubElement(pdef, 'triggerConcurrentBuilds').text = 'false'
+    data['ignore-offline-nodes'] = str(
+        data.get('ignore-offline-nodes', False)).lower()
+    XML.SubElement(pdef, 'ignoreOfflineNodes').text = \
+        data['ignore-offline-nodes']    
+    
+
 def validating_string_param(parser, xml_parent, data):
     """yaml: validating-string
     A validating string parameter

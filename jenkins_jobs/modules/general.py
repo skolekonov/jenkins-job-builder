@@ -61,7 +61,8 @@ class General(jenkins_jobs.modules.base.Base):
         if desc_text is not None:
             description = XML.SubElement(xml, 'description')
             description.text = desc_text
-        XML.SubElement(xml, 'keepDependencies').text = 'false'
+        deps = str(data.get('keep-dependencies', False)).lower()
+        XML.SubElement(xml, 'keepDependencies').text = deps
         disabled = data.get('disabled', None)
         if disabled is not None:
             if disabled:

@@ -108,6 +108,7 @@ setuptools.setup(
             'text=jenkins_jobs.modules.parameters:text_param',
             ('validating-string=jenkins_jobs.modules.parameters:'
              'validating_string_param'),
+            'node=jenkins_jobs.modules.parameters:node_param',
         ],
         'jenkins_jobs.metadata': [
             'date=jenkins_jobs.modules.metadata:date_metadata',
@@ -120,6 +121,8 @@ setuptools.setup(
         'jenkins_jobs.publishers': [
             'aggregate-tests=jenkins_jobs.modules.publishers:aggregate_tests',
             'archive=jenkins_jobs.modules.publishers:archive',
+            ('artifact-deployer=jenkins_jobs.modules.publishers:'
+             'artifact_deployer'),
             'checkstyle=jenkins_jobs.modules.publishers:checkstyle',
             'cifs=jenkins_jobs.modules.publishers:cifs',
             'claim-build=jenkins_jobs.modules.publishers:claim_build',
@@ -127,6 +130,8 @@ setuptools.setup(
             'copy-to-master=jenkins_jobs.modules.publishers:copy_to_master',
             'coverage=jenkins_jobs.modules.publishers:coverage',
             'cppcheck=jenkins_jobs.modules.publishers:cppcheck',
+            ('description-setter=jenkins_jobs.modules.publishers:'
+             'description_setter'),
             'email=jenkins_jobs.modules.publishers:email',
             'email-ext=jenkins_jobs.modules.publishers:email_ext',
             'fingerprint=jenkins_jobs.modules.publishers:fingerprint',
@@ -134,6 +139,7 @@ setuptools.setup(
             'git=jenkins_jobs.modules.publishers:git',
             ('groovy-postbuild=jenkins_jobs.modules.publishers:'
              'groovy_postbuild'),
+            'github-publisher=jenkins_jobs.modules.publishers:github_publisher', 
             'html-publisher=jenkins_jobs.modules.publishers:html_publisher',
             'ircbot=jenkins_jobs.modules.publishers:ircbot',
             'jabber=jenkins_jobs.modules.publishers:jabber',
@@ -148,6 +154,7 @@ setuptools.setup(
             'plot=jenkins_jobs.modules.publishers:plot',
             'post-tasks=jenkins_jobs.modules.publishers:post_tasks',
             'robot=jenkins_jobs.modules.publishers:robot',
+            'ruby-metrics=jenkins_jobs.modules.publishers:ruby_metrics',
             'scp=jenkins_jobs.modules.publishers:scp',
             'sloccount=jenkins_jobs.modules.publishers:sloccount',
             'sonar=jenkins_jobs.modules.publishers:sonar',
